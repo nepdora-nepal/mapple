@@ -142,10 +142,9 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           </div>
         </Link>
 
-        {/* Content */}
         <Link href={productUrl} className="block space-y-1">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
-            {product.category?.name || "Uncategorized"}
+            {product.category?.name || "\u00A0"}
           </p>
           <h3 className="font-medium text-foreground leading-snug line-clamp-2 group-hover:text-muted-foreground transition-colors">
             {product.name}

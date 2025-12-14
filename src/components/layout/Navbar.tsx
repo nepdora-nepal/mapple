@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Search, User, Heart, ShoppingBag, Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { categories } from "@/data/products";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/hooks/use-auth";
+import { useWishlist } from "@/hooks/use-wishlist";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useProducts } from "@/hooks/use-product";
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -17,7 +23,48 @@ export const Navbar = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const { openCart, totalItems } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { data: wishlist } = useWishlist();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const { data: searchResults, isLoading: isSearching } = useProducts({ 
+    search: debouncedSearch,
+    category: selectedCategory === "All" ? undefined : selectedCategory,
+    page_size: 5 
+  });
+
+  // Only show dropdown when typing and focused
+  const showDropdown = (isSearchFocused || isMobileSearchOpen) && searchQuery.length > 0;
+
+  const handleProductClick = (slug: string) => {
+    router.push(`/product/${slug}`);
+    setIsMobileSearchOpen(false);
+    setIsSearchFocused(false);
+    setSearchQuery("");
+  };
+
+  const executeSearch = () => {
+    if (searchQuery.trim()) {
+      const params = new URLSearchParams();
+      params.set("search", searchQuery.trim());
+      
+      if (selectedCategory !== "All") {
+        params.set("category", selectedCategory);
+      }
+      
+      router.push(`/products?${params.toString()}`);
+      setIsMobileSearchOpen(false);
+      setIsSearchFocused(false);
+    }
+  };
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      executeSearch();
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,7 +86,7 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-20 gap-4">
           {isMobileSearchOpen ? (
             // Mobile Search Active View
-            <div className="flex items-center w-full gap-1 md:hidden animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center w-full gap-1 md:hidden animate-in fade-in slide-in-from-top-2 duration-200 relative">
               <div className="flex-1 relative flex items-center bg-secondary rounded-xl px-2">
                 <Search className="w-4 h-4 text-muted-foreground shrink-0" />
                 <input
@@ -47,6 +94,9 @@ export const Navbar = () => {
                   autoFocus
                   placeholder="Search products..."
                   className="w-full pl-2 py-2 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearch}
                 />
               </div>
               <Button
@@ -57,6 +107,55 @@ export const Navbar = () => {
               >
                 Cancel
               </Button>
+              
+              {/* Mobile Search Dropdown */}
+              <AnimatePresence>
+                {searchQuery.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-elevated border border-border overflow-hidden z-50 max-h-[calc(100vh-120px)] overflow-y-auto"
+                  >
+                        {isSearching ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">Searching...</div>
+                        ) : searchResults?.results && searchResults.results.length > 0 ? (
+                        <div className="py-2">
+                            {searchResults.results.map((product) => (
+                                <button
+                                    key={product.id}
+                                    onClick={() => handleProductClick(product.slug || String(product.id))}
+                                    className="w-full px-4 py-3 text-left hover:bg-secondary transition-colors flex items-center gap-3 border-b border-border/50 last:border-0"
+                                >
+                                    <div className="w-10 h-10 bg-secondary rounded-md overflow-hidden shrink-0 relative">
+                                        {product.thumbnail_image && (
+                                            <Image 
+                                              src={product.thumbnail_image} 
+                                              alt={product.name} 
+                                              fill
+                                              className="object-cover" 
+                                            />
+                                        )}
+                                    </div> 
+                                    <div>
+                                        <p className="text-sm font-medium line-clamp-1">{product.name}</p>
+                                        <p className="text-xs text-muted-foreground">${parseFloat(product.price).toFixed(2)}</p>
+                                    </div>
+                                </button>
+                            ))}
+                            <button 
+                                onClick={executeSearch}
+                                className="w-full px-4 py-3 text-center text-sm text-primary font-medium hover:bg-secondary transition-colors sticky bottom-0 bg-card border-t border-border"
+                            >
+                                View all results
+                            </button>
+                        </div>
+                        ) : (
+                        <div className="p-4 text-center text-sm text-muted-foreground">No products found</div>
+                        )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
             <>
@@ -126,9 +225,61 @@ export const Navbar = () => {
                       placeholder="Search for products, brands..."
                       className="w-full px-3 py-3 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground"
                       onFocus={() => setIsSearchFocused(true)}
-                      onBlur={() => setIsSearchFocused(false)}
+                      onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)} // Delay to allow click
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={handleSearch}
                     />
                   </div>
+
+                  {/* Desktop Search Dropdown */}
+                  <AnimatePresence>
+                    {showDropdown && isSearchFocused && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-elevated border border-border overflow-hidden z-50 max-h-[400px] overflow-y-auto"
+                      >
+                         {isSearching ? (
+                            <div className="p-4 text-center text-sm text-muted-foreground">Searching...</div>
+                         ) : searchResults?.results && searchResults.results.length > 0 ? (
+                            <div className="py-2">
+                                {searchResults.results.map((product) => (
+                                    <button
+                                        key={product.id}
+                                        onClick={() => handleProductClick(product.slug || String(product.id))}
+                                        className="w-full px-4 py-3 text-left hover:bg-secondary transition-colors flex items-center gap-3 border-b border-border/50 last:border-0"
+                                    >
+                                        <div className="w-10 h-10 bg-secondary rounded-md overflow-hidden shrink-0 relative">
+                                            {product.thumbnail_image && (
+                                              <Image 
+                                                src={product.thumbnail_image} 
+                                                alt={product.name} 
+                                                fill
+                                                className="object-cover" 
+                                              />
+                                            )}
+                                        </div> 
+                                        <div>
+                                            <p className="text-sm font-medium line-clamp-1">{product.name}</p>
+                                            <p className="text-xs text-muted-foreground">${parseFloat(product.price).toFixed(2)}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                                <button 
+                                    onClick={executeSearch}
+                                    className="w-full px-4 py-3 text-center text-sm text-primary font-medium hover:bg-secondary transition-colors sticky bottom-0 bg-card border-t border-border"
+                                >
+                                    View all results
+                                </button>
+                            </div>
+                         ) : (
+                            <div className="p-4 text-center text-sm text-muted-foreground">No products found</div>
+                         )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 
@@ -145,16 +296,30 @@ export const Navbar = () => {
                 </Button>
 
                 <Link href={isAuthenticated ? "/profile" : "/auth"}>
-                  <Button variant="ghost" size="icon" className="hidden md:flex">
-                    <User className="w-5 h-5" />
-                  </Button>
+                  {isAuthenticated && user ? (
+                    <Avatar className="h-9 w-9 border-2 border-background shadow-sm hover:ring-2 hover:ring-primary/20 transition-all hidden md:block">
+                      <AvatarImage src="" alt={user.first_name || "User"} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-medium text-xs">
+                        {(user.first_name?.[0] || "U").toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <Button variant="ghost" size="icon" className="hidden md:flex">
+                      <User className="w-5 h-5" />
+                    </Button>
+                  )}
                 </Link>
                 <Link href="/wishlist">
-                  <Button variant="ghost" size="icon" className="hidden md:flex">
+                  <Button variant="ghost" size="icon" className="hidden cursor-pointer md:flex relative">
                     <Heart className="w-5 h-5" />
+                    {wishlist && wishlist.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-foreground text-background text-xs rounded-full flex items-center justify-center font-medium">
+                        {wishlist.length}
+                      </span>
+                    )}
                   </Button>
                 </Link>
-                <Button variant="ghost" size="icon" className="relative" onClick={openCart}>
+                <Button variant="ghost" size="icon" className="relative cursor-pointer" onClick={openCart}>
                   <ShoppingBag className="w-5 h-5" />
                   {totalItems > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-foreground text-background text-xs rounded-full flex items-center justify-center font-medium">
@@ -202,11 +367,18 @@ export const Navbar = () => {
               </Link>
               <Link
                 href="/wishlist"
-                className="flex items-center gap-3 py-3 text-foreground hover:text-muted-foreground transition-colors"
+                className="flex items-center gap-3 py-3 text-foreground hover:text-muted-foreground transition-colors justify-between"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <Heart className="w-5 h-5" />
-                Wishlist
+                <div className="flex items-center gap-3">
+                  <Heart className="w-5 h-5" />
+                  Wishlist
+                </div>
+                {wishlist && wishlist.length > 0 && (
+                  <span className="bg-foreground text-background text-xs rounded-full px-2 py-0.5 font-medium">
+                    {wishlist.length}
+                  </span>
+                )}
               </Link>
               <div className="pt-4 border-t border-border">
                 <p className="text-sm font-medium text-muted-foreground mb-3">
