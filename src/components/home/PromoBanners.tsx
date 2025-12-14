@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Gift, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 
 export const PromoBanners = () => {
+  const { isAuthenticated } = useAuth();
   return (
     <section className="py-16 md:py-24 bg-secondary/50">
       <div className="container-luxury">
@@ -82,10 +84,12 @@ export const PromoBanners = () => {
                   Redeem for exclusive rewards.
                 </p>
               </div>
+              <Link href={isAuthenticated ? "/profile" : "/auth"}>
               <Button variant="hero" className="group">
-                Join Now — It&apos;s Free
+                {isAuthenticated ? "My Account" : "Join Now — It's Free"}
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
+              </Link>
             </div>
 
             {/* Decorative Elements */}

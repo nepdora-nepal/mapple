@@ -34,7 +34,8 @@ import { useRouter } from "next/navigation";
 
 const ProductPage = () => {
   const params = useParams();
-  const slug = params?.slug as string;
+  // The route is /product/[id], so the param is named 'id', but it might contain a slug.
+  const slug = (params?.slug as string) || (params?.id as string);
 
   const { data: product, isLoading, error } = useProduct(slug);
   const { data: relatedData } = useProductsWithParams({
