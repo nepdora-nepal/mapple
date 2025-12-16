@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { OrdersTab } from "./profile/OrdersTab";
 
 export default function ProfilePage() {
-  const { user, logout, isAuthenticated, isLoading } = useAuth();
+  const { user, logout, isAuthenticated, isLoading, changePassword, updateProfile } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
   const [isEditing, setIsEditing] = useState(false);
@@ -48,8 +48,14 @@ export default function ProfilePage() {
   }, [isLoading, isAuthenticated, router]);
 
   const handleUpdateProfile = async () => {
-    setIsEditing(false);
-    toast.success("Profile updated successfully");
+    try {
+        await updateProfile(formData);
+        setIsEditing(false);
+        // Toast is handled in the hook
+    } catch (error) {
+        // Error toast is handled in the hook
+        console.error(error);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -74,8 +80,18 @@ export default function ProfilePage() {
         toast.error("Please fill in all fields");
         return;
     }
-    toast.success("Security settings updated");
-    setPasswordData({ old_password: "", new_password: "", confirm_password: "" });
+    
+    try {
+        await changePassword({
+            old_password: passwordData.old_password,
+            new_password: passwordData.new_password
+        });
+        // Success toast is handled in the hook, but we can clear the form here
+        setPasswordData({ old_password: "", new_password: "", confirm_password: "" });
+    } catch (error) {
+        // Error toast is handled in the hook
+        console.error(error);
+    }
   };
 
   if (isLoading || !user) {
@@ -94,7 +110,7 @@ export default function ProfilePage() {
   const menuItems = [
     { id: "account", label: "General", icon: UserIcon, description: "Profile details & shipping" },
     { id: "orders", label: "Orders", icon: Package, description: "Track & manage orders" },
-    { id: "security", label: "Security", icon: ShieldCheck, description: "Password & protection" },
+    { id: "change-password", label: "Change Password", icon: ShieldCheck, description: "Password & protection" },
   ];
 
   return (
@@ -106,7 +122,7 @@ export default function ProfilePage() {
         <div className="absolute bottom-0 left-[-10%] w-[40vw] h-[40vh] bg-primary/5 rounded-full blur-[100px] opacity-30" />
       </div>
 
-      <main className="container mx-auto px-4 pt-24 pb-20 max-w-6xl">
+      <main className="container mx-auto pt-24 pb-20 max-w-6xl">
         {/* Header Section */}
         <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -147,7 +163,7 @@ export default function ProfilePage() {
                         key={item.id}
                         onClick={() => setActiveTab(item.id)}
                         className={cn(
-                            "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group relative",
+                            "w-full flex items-center cursor-pointer justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group relative",
                             activeTab === item.id 
                                 ? "text-primary font-medium bg-primary/5" 
                                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -300,9 +316,9 @@ export default function ProfilePage() {
                 )}
 
                 {/* --- SECURITY TAB --- */}
-                {activeTab === "security" && (
+                {activeTab === "change-password" && (
                      <motion.div
-                        key="security"
+                        key="change-password"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -5 }}

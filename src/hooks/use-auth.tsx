@@ -2,7 +2,7 @@
 
 import  { createContext, useState, useEffect, useContext, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { loginUser, signupUser } from "@/services/auth";
+import { loginUser, signupUser, changePasswordUser, updateUserDetails, requestPasswordReset, confirmPasswordReset } from "@/services/auth";
 import { User, AuthTokens, DecodedAccessToken, LoginResponse } from "@/types/auth";
 import { toast } from "sonner";
 
@@ -45,6 +45,11 @@ interface AuthContextType {
     phone?: string;
     address?: string;
   }) => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+  
+  forgotPassword: (email: string) => Promise<void>;
+  resetPasswordConfirm: (data: { uid: string; token: string; password: string }) => Promise<void>;
+  changePassword: (data: { old_password: string; new_password: string }) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -198,6 +203,85 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Change Password function
+  const changePassword = async (data: { old_password: string; new_password: string }) => {
+    if (!tokens?.access) {
+       toast.error("You must be logged in to change your password");
+       return;
+    }
+
+    setIsLoading(true);
+    try {
+      await changePasswordUser({
+        ...data,
+        token: tokens.access,
+      });
+      toast.success("Password changed successfully");
+    } catch (error) {
+      const errorMessage = getErrorMessage(error as Error);
+      toast.error(errorMessage);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update Profile function
+  const updateProfile = async (data: Partial<User>) => {
+    if (!tokens?.access) {
+      toast.error("You must be logged in to update your profile");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const updatedUser = await updateUserDetails({
+        ...data,
+        token: tokens.access,
+      });
+
+      setUser(updatedUser);
+      toast.success("Profile updated successfully");
+    } catch (error) {
+       const errorMessage = getErrorMessage(error as Error);
+       toast.error(errorMessage);
+       throw error;
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  // Forgot Password function
+  const forgotPassword = async (email: string) => {
+    setIsLoading(true);
+    try {
+      await requestPasswordReset({ email });
+      toast.success("Password reset email sent. Please check your inbox.");
+    } catch (error) {
+      const errorMessage = getErrorMessage(error as Error);
+      toast.error(errorMessage);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Reset Password Confirm function
+  const resetPasswordConfirm = async (data: { uid: string; token: string; password: string }) => {
+    setIsLoading(true);
+    try {
+      await confirmPasswordReset(data);
+      toast.success("Password has been reset successfully. You can now log in.");
+      router.push("/auth");
+    } catch (error) {
+      const errorMessage = getErrorMessage(error as Error);
+      toast.error(errorMessage);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Logout function
   const logout = () => {
     setUser(null);
@@ -215,6 +299,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         tokens,
         login,
         signup,
+        forgotPassword,
+        resetPasswordConfirm,
+        changePassword,
+        updateProfile,
         logout,
         isLoading,
         isAuthenticated: !!user && !!tokens,

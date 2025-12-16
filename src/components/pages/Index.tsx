@@ -1,7 +1,7 @@
 "use client";
 
 import { HeroSection } from "@/components/home/HeroSection";
-import { CategoryStrip } from "@/components/home/CategoryStrip";
+// import { CategoryStrip } from "@/components/home/CategoryStrip";
 import { FeaturedBrand } from "@/components/home/FeaturedBrand";
 import { TrendingProducts } from "@/components/home/TrendingProducts";
 import { PromoBanners } from "@/components/home/PromoBanners";
@@ -13,7 +13,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <main>
         <HeroSection />
-        <CategoryStrip />
+        {/* <CategoryStrip /> */}
         <TrendingProducts />
         <FeaturedBrand />
         <PromoBanners />
