@@ -47,6 +47,25 @@ export default function ProfilePage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
+  // Sync formData with user when user updates (e.g. after fetch on mount)
+  // Removed useEffect to avoid sync issues. Logic moved to Edit button.
+
+  // Sync formData with user when user updates (e.g. after fetch on mount)
+  // Removed useEffect to avoid sync issues. Logic moved to Edit button.
+
+  const handleEditClick = () => {
+    if (user) {
+        setFormData({
+            first_name: user.first_name || "",
+            last_name: user.last_name || "",
+            email: user.email || "",
+            phone: user.phone || "",
+            address: user.address || "",
+        });
+    }
+    setIsEditing(true);
+  };
+
   const handleUpdateProfile = async () => {
     try {
         await updateProfile(formData);
@@ -59,15 +78,6 @@ export default function ProfilePage() {
   };
 
   const handleCancelEdit = () => {
-    if (user) {
-      setFormData({
-        first_name: user.first_name || "",
-        last_name: user.last_name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        address: user.address || "",
-      });
-    }
     setIsEditing(false);
   };
 
@@ -217,7 +227,7 @@ export default function ProfilePage() {
                             </div>
                             <div className="flex items-center gap-2">
                                 {!isEditing ? (
-                                    <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="h-9 px-4 text-xs">
+                                    <Button onClick={handleEditClick} variant="outline" size="sm" className="h-9 px-4 text-xs">
                                         Edit Profile
                                     </Button>
                                 ) : (
@@ -261,25 +271,25 @@ export default function ProfilePage() {
                         <div className="grid gap-x-8 gap-y-8 md:grid-cols-2">
                             <ProfileField 
                                 label="First Name" 
-                                value={formData.first_name} 
+                                value={isEditing ? formData.first_name : user.first_name || ""} 
                                 isEditing={isEditing}
                                 onChange={(val) => setFormData({...formData, first_name: val})}
                             />
                             <ProfileField 
                                 label="Last Name" 
-                                value={formData.last_name} 
+                                value={isEditing ? formData.last_name : user.last_name || ""} 
                                 isEditing={isEditing}
                                 onChange={(val) => setFormData({...formData, last_name: val})}
                             />
                             <ProfileField 
                                 label="Email Address" 
-                                value={formData.email} 
+                                value={isEditing ? formData.email : user.email || ""} 
                                 isEditing={isEditing}
                                 onChange={(val) => setFormData({...formData, email: val})}
                             />
                             <ProfileField 
                                 label="Phone Number" 
-                                value={formData.phone} 
+                                value={isEditing ? formData.phone : user.phone || ""}
                                 isEditing={isEditing}
                                 placeholder="+1 (555) 000-0000"
                                 onChange={(val) => setFormData({...formData, phone: val})}
@@ -287,7 +297,7 @@ export default function ProfilePage() {
                             <div className="md:col-span-2">
                                 <ProfileField 
                                     label="Shipping Address" 
-                                    value={formData.address} 
+                                    value={isEditing ? formData.address : user.address || ""}
                                     isEditing={isEditing}
                                     icon={<MapPin className="w-4 h-4" />}
                                     placeholder="Street address, City, State, Zip"

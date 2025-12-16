@@ -2,7 +2,7 @@
 
 import  { createContext, useState, useEffect, useContext, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { loginUser, signupUser, changePasswordUser, updateUserDetails, requestPasswordReset, confirmPasswordReset } from "@/services/auth";
+import { loginUser, signupUser, changePasswordUser, updateUserDetails, requestPasswordReset, confirmPasswordReset, getUserDetails } from "@/services/auth";
 import { User, AuthTokens, DecodedAccessToken, LoginResponse } from "@/types/auth";
 import { toast } from "sonner";
 
@@ -69,36 +69,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Check for existing tokens on mount
   useEffect(() => {
-    const storedTokens = localStorage.getItem(AUTH_TOKENS_KEY);
-    if (storedTokens) {
-      try {
-        const parsedTokens: AuthTokens = JSON.parse(storedTokens);
-        const decodedAccess = decodeToken(parsedTokens.access);
+    const initAuth = async () => {
+      const storedTokens = localStorage.getItem(AUTH_TOKENS_KEY);
+      if (storedTokens) {
+        try {
+          const parsedTokens: AuthTokens = JSON.parse(storedTokens);
+          const decodedAccess = decodeToken(parsedTokens.access);
 
-        if (decodedAccess && decodedAccess.exp * 1000 > Date.now()) {
-          setTokens(parsedTokens);
-          setUser({
-            id: decodedAccess.user_id,
-            email: decodedAccess.email,
-            username: decodedAccess.email,
-            first_name: decodedAccess.first_name,
-            last_name: decodedAccess.last_name,
-            phone: decodedAccess.phone,
-            address: decodedAccess.address,
-          });
-        } else {
-          // Token expired
-          localStorage.removeItem(AUTH_TOKENS_KEY);
-          if (decodedAccess) {
-            toast.error("Session expired. Please log in again.");
+          if (decodedAccess && decodedAccess.exp * 1000 > Date.now()) {
+            setTokens(parsedTokens);
+            // Initial optimistic set from token
+            setUser({
+                id: decodedAccess.user_id,
+                email: decodedAccess.email,
+                username: decodedAccess.email,
+                first_name: decodedAccess.first_name,
+                last_name: decodedAccess.last_name,
+                phone: decodedAccess.phone,
+                address: decodedAccess.address,
+            });
+
+            // Fetch fresh user data
+            try {
+                const freshUser = await getUserDetails(parsedTokens.access);
+                setUser(freshUser);
+            } catch (error) {
+                console.error("Failed to fetch fresh user details:", error);
+                // Optionally handle token invalidation here if needed
+            }
+
+          } else {
+            // Token expired
+            localStorage.removeItem(AUTH_TOKENS_KEY);
+            if (decodedAccess) {
+              toast.error("Session expired. Please log in again.");
+            }
           }
+        } catch (error) {
+          console.error("Failed to parse stored tokens:", error);
+          localStorage.removeItem(AUTH_TOKENS_KEY);
         }
-      } catch (error) {
-        console.error("Failed to parse stored tokens:", error);
-        localStorage.removeItem(AUTH_TOKENS_KEY);
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   // Handle successful auth

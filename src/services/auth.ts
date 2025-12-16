@@ -103,6 +103,24 @@ export async function updateUserDetails(data: UpdateProfileData): Promise<User> 
   return response.json();
 }
 
+export async function getUserDetails(token: string): Promise<User> {
+  const API_BASE_URL = siteConfig.backendUrl;
+
+  const response = await fetch(`${API_BASE_URL}/api/customer/detail/`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch user details");
+  }
+  return response.json();
+}
+
 export async function requestPasswordReset(data: PasswordResetRequestData): Promise<{ message: string }> {
   const API_BASE_URL = siteConfig.backendUrl;
 
