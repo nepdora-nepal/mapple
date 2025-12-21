@@ -20,8 +20,54 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GLOW",
-  description: "Glow",
+  title: {
+    default: "GLOW | Premium Skincare & Beauty Essentials",
+    template: "%s | GLOW"
+  },
+  description: "Discover your natural radiance with GLOW. Shop our curated collection of luxury skincare, beauty products, and wellness essentials for every skin type.",
+  keywords: ["skincare", "beauty products", "luxury skincare", "natural beauty", "glow", "skincare routine", "beauty essentials"],
+  authors: [{ name: "GLOW Team" }],
+  creator: "GLOW",
+  publisher: "GLOW",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://glow-luxury.vercel.app",
+    siteName: "GLOW",
+    title: "GLOW | Premium Skincare & Beauty Essentials",
+    description: "Discover your natural radiance with GLOW. Shop our curated collection of luxury skincare and beauty products.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "GLOW Luxury Skincare",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GLOW | Premium Skincare & Beauty Essentials",
+    description: "Discover your natural radiance with GLOW. Shop our curated collection of luxury skincare and beauty products.",
+    images: ["/og-image.jpg"],
+    creator: "@glowbeauty",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({

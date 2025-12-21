@@ -23,18 +23,19 @@ import Image from "next/image";
 
 const CheckoutPage = () => {
   const { cartItems, totalPrice, clearCart } = useCart();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const { mutateAsync: createOrderMutation, isPending: isCreatingOrder } = useCreateOrder();
+  
   const [formData, setFormData] = useState({
-    email: "",
-    firstName: "",
-    lastName: "",
-    address: "",
+    email: user?.email || "",
+    firstName: user?.first_name || "",
+    lastName: user?.last_name || "",
+    address: user?.address || "",
     city: "",
     zipCode: "",
-    phone: "",
+    phone: user?.phone || "",
     shippingMethod: "standard",
   });
 
@@ -45,6 +46,21 @@ const CheckoutPage = () => {
       router.push("/auth");
     }
   }, [isLoading, isAuthenticated, router]);
+
+  // Synchronize formData when user changes (e.g. loads async)
+  // Using update-during-render pattern to avoid cascading renders warning
+  const [prevUserId, setPrevUserId] = useState(user?.id);
+  if (user && user.id !== prevUserId) {
+    setPrevUserId(user.id);
+    setFormData((prev) => ({
+      ...prev,
+      email: user.email || prev.email,
+      firstName: user.first_name || prev.firstName,
+      lastName: user.last_name || prev.lastName,
+      phone: user.phone || prev.phone,
+      address: user.address || prev.address,
+    }));
+  }
 
   if (isLoading) {
     return (
